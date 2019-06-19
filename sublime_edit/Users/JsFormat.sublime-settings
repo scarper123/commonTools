@@ -1,0 +1,15 @@
+{
+	// exposed jsbeautifier options
+	// "indent_with_tabs": true,
+	"brace_style": "expand",
+	// "operator_position": "before-newline",
+	// "keep_array_indentation": true,
+	// "keep_function_indentation": true,
+	// "break_chained_methods": true,
+	// "end-with-newline": false,
+    // "indent_level": 1,
+
+	// jsformat options
+	"ignore_sublime_settings": false,
+	"format_on_save_extensions": ["js", "json"]
+}

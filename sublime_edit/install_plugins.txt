@@ -1,0 +1,14 @@
+Package Control
+Compare Side-By-Side
+DocBlockr_Python
+GitGutter
+Gitignore
+JsFormat
+Material Theme
+SideBarEnhancements
+SublimeTemp
+Terminal
+
+Anaconda
+CMake
+Nodejs
