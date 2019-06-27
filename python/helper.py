@@ -19,23 +19,69 @@ from pexpect import pxssh
 
 TMP_DIR = '/dev/shm'
 
-logFormat = "<%(asctime)s> [%(name)s] [%(levelname)s] %(message)s"
-logging.basicConfig(stream=sys.stdout,
-                    level=logging.INFO,
-                    format=logFormat,
-                    datefmt='%Y-%m-%d %H:%M:%S')
+
+def string(data, encoding='UTF-8'):
+    if isinstance(data, bytes):
+        return data.decode(encoding)
+    return data
 
 
-def command(cmd, ignore=False):
+def binary(data, encoding='UTF-8'):
+    if isinstance(data, str):
+        return data.encode(encoding)
+    return data
+
+
+def getLogger(name=None, stream=None, filePath=None,
+              level=logging.INFO, fmtStr=None, dateStr=None):
+    if stream is None:
+        stream = sys.__stdout__
+
+    if fmtStr is None:
+        fmtStr = "<%(asctime)s> [%(name)s] [%(levelname)s] %(message)s"
+    if dateStr is None:
+        dateStr = '%Y-%m-%d %H:%M:%S'
+
+    logFormatter = logging.Formatter(fmtStr, dateStr)
+
+    log = logging.getLogger(name)
+    log.setLevel(level)
+
+    streamHandler = logging.StreamHandler(stream)
+    streamHandler.setFormatter(logFormatter)
+    log.addHandler(streamHandler)
+
+    if filePath is not None:
+        fileHandler = logging.FileHandler(filePath, 'wt')
+        fileHandler.setFormatter(logFormatter)
+        log.addHandler(fileHandler)
+
+    return log
+
+
+logger = getLogger('helper')
+
+
+def command(cmd, ignore=False, timeout=None):
     """Use subprocess to run command, and check output
 
     Args:
         cmd (Str): Command line
         ignore (bool, optional): Ignore the command error
+        timeout (Float): Timeout for command execute
 
     Returns:
         Str: Decode command string
     """
+    def handleEx(ex):
+        output = string(ex.output).strip()
+        if not ignore:
+            logger.error(str(ex))
+            for line in output.splitlines():
+                logger.error(line.strip())
+            raise ex
+        return output
+
     popenArgs = {
         'shell': True,
         'stderr': subprocess.STDOUT
@@ -43,16 +89,12 @@ def command(cmd, ignore=False):
     logger.debug('Execute cmd: "%s"', cmd)
     try:
         output = subprocess.check_output(cmd, **popenArgs)
-        output = output.decode('UTF-8').strip()
     except subprocess.CalledProcessError as ex:
-        output = ex.output.decode('UTF-8').strip()
-        if not ignore:
-            logger.error(str(ex))
-            for line in output.splitlines():
-                logger.error(line.strip())
-            raise ex
-
-    return output
+        return handleEx(ex)
+    except subprocess.TimeoutExpired as ex:
+        return handleEx(ex)
+    else:
+        return string(output).strip()
 
 
 def createLockFile(path, force=False):
@@ -131,12 +173,6 @@ def mongodbCollection(host=None, port=None,
     if username and password:
         db.authenticate(username, password)
     return db[collName]
-
-
-def unicode(data):
-    if isinstance(data, bytes):
-        return data.decode()
-    return data
 
 
 class LoggerMixin(object):
@@ -306,4 +342,11 @@ class BashSession(Shell):
         os.remove(self.bashrc)
 
 
-logger = logging.getLogger()
+def testCommand():
+    import pprint
+    data = command('ls -lrt')
+    pprint.pprint(data)
+
+
+if __name__ == '__main__':
+    testCommand()
